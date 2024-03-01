@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models.functions import Now
+#from django.db.models.functions import Now
 
 class File(models.Model):
     #base64 encoded id
@@ -11,5 +11,6 @@ class File(models.Model):
     #size of file in bytes
     size = models.IntegerField()
 
-    #when the file was uploaded
-    date_uploaded = models.DateTimeField(db_default=Now()) 
+    #when the file was uploaded (time in milliseconds)
+    date_uploaded = models.BigIntegerField()
+    #date_uploaded = models.DateTimeField(db_default=Now()) 
