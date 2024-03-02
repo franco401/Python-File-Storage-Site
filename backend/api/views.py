@@ -38,17 +38,29 @@ def get_file(request: HttpRequest, file_name) -> Response:
         file_obj = {
             'name': file.name,
             'size': file.size,
-            'date_uploaded': file.date_uploaded
+            'date_uploaded': file.date_uploaded,
+            'uploader': file.uploader,
         }
 
         return Response(file_obj)
 
-# route: api/get-files
+# route: api/get-all-files
 @api_view(['GET'])
-def get_files(request: HttpRequest) -> Response:
+def get_all_files(request: HttpRequest) -> Response:
     if request.method == 'GET':
         #query database to get all file data
         files = File.objects.all()
+        
+        file_serializer = FileSerializer(files, many=True)
+        return Response(file_serializer.data)
+
+
+# route: api/files/user/<str:username>
+@api_view(['GET'])
+def get_files_from_user(request: HttpRequest, username: str) -> Response:
+    if request.method == 'GET':
+        #query database to get all file data from a specific directory
+        files = File.objects.filter(uploader=username)
         
         file_serializer = FileSerializer(files, many=True)
         return Response(file_serializer.data)
@@ -94,7 +106,44 @@ def upload_file(request: HttpRequest) -> HttpResponse:
             file_id = create_file_id(file.name + str(current_time)),
             name = file.name,
             size = file.size,
-            date_uploaded = current_time
+            date_uploaded = current_time,
+            #uploader = "",
         )
 
         return JsonResponse(file_name, safe=False)
+
+# route: api/register-user
+@api_view(['POST'])
+def register_user(request: HttpRequest) -> Response:
+    if request.method == 'POST':
+        email = request.data['email']
+        password = request.data['password']
+
+        '''
+        gets name from email
+        example: gets user1 from user1@example.com
+        '''
+        username = email[0:email.index("@")]
+
+        try:
+            #create user account and save it to database
+            user = UserAccount.objects.create_user(email=email, name=username, password=password)
+            user.save()
+            return Response(200)
+        except Exception as e:
+            print(f'Error: {e}')
+            return Response(404)
+        
+# route: api/delete-user
+@api_view(['POST'])
+def delete_user(request: HttpRequest) -> Response:
+    if request.method == 'POST':
+        email = request.data['email']
+        try:
+            #get user object from database and delete it
+            user = UserAccount.objects.get(email=email)
+            user.delete()
+            return Response(200)
+        except Exception as e:
+            print(f'Error: {e}')
+            return Response(404)

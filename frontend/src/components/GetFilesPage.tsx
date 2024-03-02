@@ -4,6 +4,7 @@ import axios from "axios"
 export default function GetFilesPage() {
   const [files, setFiles] = useState([])
   const [fileToUpload, setFileToUpload] = useState<File>()
+  let [username, setUserName] = useState<string>("user5")
 
   //load all files from database
   useEffect(() => {
@@ -12,7 +13,7 @@ export default function GetFilesPage() {
   }, [])
 
   async function getFiles() {
-    let response = await fetch("http://127.0.0.1:8000/api/get-files").then(response => response.json())
+    let response = await fetch(`http://127.0.0.1:8000/api/files/user/${username}`).then(response => response.json())
     await setFiles(response)
   }
 
@@ -61,9 +62,10 @@ export default function GetFilesPage() {
         let url = `http://127.0.0.1:8000/api/download-file/${file?.name}`
         return (
             <tr>
-              <th>{file?.name}</th>
+              <th><img style={{'width': '32px', 'height': '32px'}} src="file_icon.png"></img>{file?.name}</th>
               <th>{getFileSize(file?.size)}</th>
               <th>{getTime(file?.date_uploaded)}</th>
+              <th>{file?.uploader}</th>
               <th>
                 <a href={url}><button>Download</button></a>
               </th>
@@ -78,8 +80,8 @@ export default function GetFilesPage() {
 
         <input onChange={getFileInput} type="file" id="fileToUpload"></input>
         <button onClick={uploadFile} id="uploadFile">Upload File</button>
-
-        <p>Your Files</p>
+        <br></br>
+        <br></br>
 
         <table> 
           <tbody>
@@ -87,6 +89,7 @@ export default function GetFilesPage() {
               <th>Name</th>
               <th>Size</th>
               <th>Date Uploaded</th>
+              <th>Uploader</th>
               <th>Download</th>
             </tr>
 
