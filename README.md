@@ -10,4 +10,8 @@ A full stack, file storage web application using Python and TypeScript. Users ca
 * Users can view files they uploaded to the server
 * Users can download files from the server
 * Base64 encoded strings are used as IDs for the file objects in the database
-* Users can register an account and login
+* Users can register an account and delete it
+
+# Features to be added later
+* User authentication
+* Logging in to an account
