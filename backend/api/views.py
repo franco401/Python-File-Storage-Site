@@ -27,24 +27,28 @@ def create_file_id(data: str) -> str:
     base64_string = base64_bytes.decode("ascii")
     return base64_string
 
-# route: api/get-file/<str:file_name>
+# route: api/file/<str:file_name>/
 @api_view(['GET'])
 def get_file(request: HttpRequest, file_name) -> Response:
     if request.method == 'GET':
-        #query database to get specific file data    
-        file = File.objects.get(name=file_name)
+        try:
+            #query database to get specific file data    
+            file = File.objects.get(name=file_name)
 
-        #json data to send to frontend
-        file_obj = {
-            'name': file.name,
-            'size': file.size,
-            'date_uploaded': file.date_uploaded,
-            'uploader': file.uploader,
-        }
+            #json data to send to frontend
+            file_obj = {
+                'name': file.name,
+                'size': file.size,
+                'date_uploaded': file.date_uploaded,
+                'uploader': file.uploader,
+            }
 
-        return Response(file_obj)
+            return Response(data=file_obj)
+        except:
+            #if the specified file name isn't in the database
+            return Response(status=404, data={"error": "file_not_found"})
 
-# route: api/get-all-files
+# route: api/all-files/
 @api_view(['GET'])
 def get_all_files(request: HttpRequest) -> Response:
     if request.method == 'GET':
@@ -52,45 +56,53 @@ def get_all_files(request: HttpRequest) -> Response:
         files = File.objects.all()
         
         file_serializer = FileSerializer(files, many=True)
-        return Response(file_serializer.data)
+        return Response(data=file_serializer.data)
 
 
-# route: api/files/user/<str:username>
+# route: api/files/user/<str:username>/
 @api_view(['GET'])
 def get_files_from_user(request: HttpRequest, username: str) -> Response:
     if request.method == 'GET':
-        #query database to get all file data from a specific directory
-        files = File.objects.filter(uploader=username)
-        
-        file_serializer = FileSerializer(files, many=True)
-        return Response(file_serializer.data)
+        try:
+            #query database to get all file data from a specific user
+            files = File.objects.filter(uploader=username)
+            
+            file_serializer = FileSerializer(files, many=True)
+            return Response(data=file_serializer.data)
+        except:
+            #if specified user doesn't exist
+            return Response(status=404)
 
 
-# route: api/download-file/<str:file_name>
+# route: api/download-file/<str:file_name>/
 def download_file(request: HttpRequest, file_name: str) -> HttpResponse:
     #get path of file to download
     file_path = settings.MEDIA_ROOT + "\\" + file_name
     file_path = file_path.replace('\\', '/')
 
-    #open file
-    file = open(file_path, 'rb')
-    
-    #get mimetype of file
-    mime_type = mimetypes.guess_type(file_path)
+    try:
+        #open file
+        file = open(file_path, 'rb')
+        
+        #get mimetype of file
+        mime_type = mimetypes.guess_type(file_path)
 
-    '''
-    create http response object to
-    allow user to download file
-    '''
-    response = HttpResponse(file, content_type=mime_type)
-    response['Content-Disposition'] = f'attachment; filename={file_name}'
+        '''
+        create http response object to
+        allow user to download file
+        '''
+        response = HttpResponse(file, content_type=mime_type)
+        response['Content-Disposition'] = f'attachment; filename={file_name}'
 
-    return response
+        return response
+    except:
+        #if specified file is not found
+        return HttpResponse(404)
 
 
-# route: api/upload-file
+# route: api/upload-file/
 @api_view(['POST'])
-def upload_file(request: HttpRequest) -> HttpResponse:
+def upload_file(request: HttpRequest) -> JsonResponse:
     if request.method == 'POST':
         #file uploaded from post request
         file = request.FILES['file']
@@ -112,7 +124,24 @@ def upload_file(request: HttpRequest) -> HttpResponse:
 
         return JsonResponse(file_name, safe=False)
 
-# route: api/register-user
+# route: api/delete-file/<str:file_name>/
+def delete_file(request: HttpRequest, file_name: str) -> HttpResponse:
+    try:
+        #query file name from database
+        file = File.objects.get(name=file_name)
+
+        #delete file from database
+        file.delete()
+
+        #delete file from media folder
+        default_storage.delete(file.name)
+
+        return HttpResponse(200)
+    except:
+        #if file name is not in database
+        return HttpResponse(404)
+
+# route: api/register-user/
 @api_view(['POST'])
 def register_user(request: HttpRequest) -> Response:
     if request.method == 'POST':
@@ -129,12 +158,32 @@ def register_user(request: HttpRequest) -> Response:
             #create user account and save it to database
             user = UserAccount.objects.create_user(email=email, name=username, password=password)
             user.save()
-            return Response(200)
+            return Response(status=200)
         except Exception as e:
-            print(f'Error: {e}')
-            return Response(404)
+            return Response(status=404)
         
-# route: api/delete-user
+
+# route: api/login-user/
+@api_view(['POST'])
+def login_user(request: HttpRequest) -> Response:
+    if request.method == 'POST':
+        email = request.data['email']
+        password = request.data['password']
+
+        try:
+            #try to find account by email in database
+            user = UserAccount.objects.get(email=email)
+            
+            #if account's password matches
+            if user.check_password(password):
+                return Response(status=200)
+            else:
+                return Response(status=404)
+        except:
+            #if account doesn't exist (couldn't find email)
+            return Response(status=404)
+
+# route: api/delete-user/
 @api_view(['POST'])
 def delete_user(request: HttpRequest) -> Response:
     if request.method == 'POST':
@@ -143,7 +192,7 @@ def delete_user(request: HttpRequest) -> Response:
             #get user object from database and delete it
             user = UserAccount.objects.get(email=email)
             user.delete()
-            return Response(200)
+            return Response(status=200)
         except Exception as e:
             print(f'Error: {e}')
-            return Response(404)
+            return Response(status=404)

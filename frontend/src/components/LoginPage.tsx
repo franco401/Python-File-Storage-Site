@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom"
 
-export default function RegisterPage() {
+export default function LoginPage() {
     let navigate = useNavigate()
 
-    async function registerAccount(event: ChangeEvent<HTMLInputElement>) {
+    async function login(event: ChangeEvent<HTMLInputElement>) {
+
         event.preventDefault()
 
         let email = event.currentTarget.email.value
@@ -33,44 +34,37 @@ export default function RegisterPage() {
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} unfinished inputs`)
         } else {
-            let response = await fetch("http://127.0.0.1:8000/api/register/", {
+            let response = await fetch("http://127.0.0.1:8000/api/token/", {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(inputFields)
             }).then(response => response.json())
 
-            //go to login page if registration is successful
-            navigate("/login")
-        }
-    }
+            //check if response returned jwt token
+            if (response['refresh'] || response['access']) {
+                localStorage.setItem("jwt", JSON.stringify(response))
 
-    //testing account deletion
-    async function deleteAccount() {
-        let postData = {
-            'email': 'user1@example.com'
+                //go to files page if login is successful
+                navigate("/files")
+            } else {
+                alert("Invalid user credentials.")
+            }
         }
-
-        let response = await fetch("http://127.0.0.1:8000/api/delete-user/", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(postData)
-            }).then(response => response.json())
     }
 
     return (
         <div>
-            <form onSubmit={registerAccount}>
+            <form onSubmit={login}>
                 <label>Email</label>
                 <input id="email"></input>
                 <br></br>
                 <label>Password</label>
                 <input id="password" type="password"></input>
                 <br></br>
-                <button>Register Account</button>
+                <button>Login</button>
             </form>
         </div>
     )
