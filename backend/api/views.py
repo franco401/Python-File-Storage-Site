@@ -21,6 +21,26 @@ import time
 #used for making a base64 string
 import base64
 
+#used for customizing jwt token
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+#==============================================================
+#used for adding username to jwt response
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        token = super().validate(attrs)
+
+        # Add your extra responses here
+        token['username'] = self.user.name
+        return token
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+#==============================================================
+
+
 # creates a base64 encoded string
 def create_file_id(data: str) -> str:
     base64_bytes = base64.b64encode(data.encode("ascii"))
@@ -67,6 +87,9 @@ def get_files_from_user(request: HttpRequest, username: str) -> Response:
             #query database to get all file data from a specific user
             files = File.objects.filter(uploader=username)
             
+            for file in files:
+                print("file:", file.name, file.uploader)
+
             file_serializer = FileSerializer(files, many=True)
             return Response(data=file_serializer.data)
         except:
@@ -106,23 +129,32 @@ def upload_file(request: HttpRequest) -> JsonResponse:
     if request.method == 'POST':
         #file uploaded from post request
         file = request.FILES['file']
-    
+
+        #get the index of the character '|'
+        delimiter_index = file.name.index("|")
+        
+        #get username from substring before '|'
+        username = file.name[0:delimiter_index]
+        
+        #get filename from substring after '|'
+        file_name = file.name[delimiter_index+1:]
+
         #upload file to a server directory    
-        file_name = default_storage.save(file.name, file)
+        file_to_save = default_storage.save(file_name, file)
 
         #get current time in milliseconds
         current_time = round(time.time() * 1000)
 
-        #insert file to database (name, size, date_uploaded)
+        #insert file to database (with the following data below)
         File.objects.create(
-            file_id = create_file_id(file.name + str(current_time)),
-            name = file.name,
+            file_id = create_file_id(file_name + str(current_time)),
+            name = file_name,
             size = file.size,
             date_uploaded = current_time,
-            #uploader = "",
+            uploader = username,
         )
 
-        return JsonResponse(file_name, safe=False)
+        return JsonResponse(file_to_save, safe=False)
 
 # route: api/delete-file/<str:file_name>/
 def delete_file(request: HttpRequest, file_name: str) -> HttpResponse:
@@ -159,11 +191,13 @@ def register_user(request: HttpRequest) -> Response:
             user = UserAccount.objects.create_user(email=email, name=username, password=password)
             user.save()
             return Response(status=200)
-        except Exception as e:
+        except:
+            #if an insert error occurs
             return Response(status=404)
         
 
 # route: api/login-user/
+# may be unused
 @api_view(['POST'])
 def login_user(request: HttpRequest) -> Response:
     if request.method == 'POST':
@@ -193,6 +227,6 @@ def delete_user(request: HttpRequest) -> Response:
             user = UserAccount.objects.get(email=email)
             user.delete()
             return Response(status=200)
-        except Exception as e:
-            print(f'Error: {e}')
+        except:
+            #if account doesn't exist (couldn't find email)
             return Response(status=404)

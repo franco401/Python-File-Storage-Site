@@ -1,6 +1,11 @@
 import { useState, useEffect, ChangeEvent } from "react"
+
+//used for file uploading
 import axios from "axios"
+
+//used for page navigation
 import { useNavigate } from "react-router-dom"
+
 
 export default function GetFilesPage() {
   const [files, setFiles] = useState([])
@@ -13,60 +18,65 @@ export default function GetFilesPage() {
 
   //load all files from database
   useEffect(() => {
-
     getFiles()
   }, [])
 
   async function getFiles() {
     let jwt = JSON.parse(localStorage.getItem("jwt"))
     
-    /**
-     * check if jwt is in localStorage and if it has
-     * the access and refresh properties
-     */
-    if (jwt['access'] && jwt['refresh']) {
+    //make sure the jwt is in localStorage
+    if (jwt !== null) {
       console.log(jwt)
-      //check if access token expired
-      if (await tokenHasExpired(jwt['access'])) {
-        //check if refresh token expired as well
-        if (await tokenHasExpired(jwt['refresh'])) {
-          /**
-           * clear localStorage and leave this page
-           * if both access and refresh tokens have expired
-           */
-          localStorage.clear()
-          navigate("/")
+      /**
+       * check if jwt is in localStorage and if it has
+       * the access and refresh properties
+       */
+      if (jwt['access'] && jwt['refresh']) {
+        //check if access token expired
+        if (await tokenHasExpired(jwt['access'])) {
+          alert("Access expired")
+          //check if refresh token expired as well
+          if (await tokenHasExpired(jwt['refresh'])) {
+            alert("Refresh expired")
+            logOut()
+          } else {
+            /**
+              * if access token has expired but refresh hasn't,
+              * get new access token and stay on page
+              */
+            await refreshToken(jwt['refresh'])
+
+            //get username from access token
+            setUserName("user1")
+
+            document.getElementById("uploadFile").disabled = true
+            let response = await fetch(`http://127.0.0.1:8000/api/files/user/${username}/`).then(response => response.json())
+            await setFiles(response)
+          }
         } else {
-          /**
-           * if access token has expired but refresh hasn't,
-           * get new access token and stay on page
-           */
+          alert("Access valid")
+          //get username from jwt to get their files
+          setUserName(jwt['username'])
 
-          //call refresh() from django and store it in LS
-
-          //decode username from access token
-          //setUserName("")
-
+          //stay on page if access token has not expired
           document.getElementById("uploadFile").disabled = true
           let response = await fetch(`http://127.0.0.1:8000/api/files/user/${username}/`).then(response => response.json())
           await setFiles(response)
         }
       } else {
-        //decode username from access token
-        //setUserName("")
-
-        //stay on page if access token has not expired
-        document.getElementById("uploadFile").disabled = true
-        let response = await fetch(`http://127.0.0.1:8000/api/files/user/${username}/`).then(response => response.json())
-        await setFiles(response)
+        //leave this page if access and refresh are not in jwt
+        alert("jwt does not have access and refresh")
+        navigate("/")
       }
     } else {
-      //leave this page if jwt is not found
+      //leave this page if jwt is not in localStorage
+      alert("jwt not in localStorage")
       navigate("/")
     }
   }
-
-  async function tokenHasExpired(token: string, name: string): boolean {
+  
+  //checks if a given access or refresh token has expired 
+  async function tokenHasExpired(token: string): boolean {
     let tokenExpired = false
 
     let postData = {
@@ -82,11 +92,52 @@ export default function GetFilesPage() {
         body: JSON.stringify(postData)
     }).then(response => response.json())
     
+    /**
+     * checks if the server returns a response
+     * saying the token is invalid
+     */
     if (response['code'] == 'token_not_valid') {
       tokenExpired = true
     }
 
     return tokenExpired
+  }
+
+  //refreshs an access token with a given refresh token
+  async function refreshToken(token: string) {
+    let postData = {
+      'refresh': token
+    }
+    
+    let response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData)
+    }).then(response => response.json())
+    
+    /**
+     * checks if the server returns a response
+     * saying the refresh token is invalid
+     */
+    if (response['code'] == 'token_not_valid') {
+      alert("Refresh invalid / expired")
+      logOut()
+    } else {
+      let newJWT = {
+        'refresh': response['refresh'],
+        'access': response['access']
+      }
+      //replace old jwt with new, refreshed one
+      alert("Refreshing jwt")
+      console.log("Refresh response:", response)
+      console.log("newJWT:", newJWT)
+      
+      localStorage.removeItem('jwt')
+      localStorage.setItem('jwt', JSON.stringify(newJWT))
+    }
   }
 
   //get the file to be uploaded
@@ -103,7 +154,9 @@ export default function GetFilesPage() {
   async function uploadFile() {
     //create form data to upload file to server
     let formData = new FormData()
-    formData.append('file', fileToUpload, fileToUpload.name)
+    
+    //append username to file name to get the name of file uploader
+    formData.append('file', fileToUpload, `${username}|` + fileToUpload.name)
 
     //upload file to server
     await axios.post("http://127.0.0.1:8000/api/upload-file/", formData)
@@ -151,9 +204,21 @@ export default function GetFilesPage() {
       })
     }
 
+    /**
+    * clear localStorage and leave this page
+    * if both access and refresh tokens have expired
+    */
+    function logOut() {
+      localStorage.clear()
+      navigate("/")
+    }
+
     return (
       <div>
-        <h1>Your Files</h1>
+        <h1>Welcome back, {username}!</h1>
+        <h2>Your Files</h2>
+
+        <button onClick={logOut}>Logout</button>
 
         <input onChange={getFileInput} type="file" id="fileToUpload"></input>
         <button onClick={uploadFile} id="uploadFile">Upload File</button>
