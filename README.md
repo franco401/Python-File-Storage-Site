@@ -14,5 +14,4 @@ A full stack, file storage web application using Python and TypeScript. Users ca
 * Added JWT (Json Web Tokens) for user authentication
 
 # Features to add/finish
-* Fixing user authenticaiton in the frontend
 * Applying Bootstrap to the frontend

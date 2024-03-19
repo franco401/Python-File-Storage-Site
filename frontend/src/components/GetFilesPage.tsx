@@ -21,9 +21,9 @@ export default function GetFilesPage() {
     getFiles()
   }, [])
 
-  async function getFiles() {
-    let jwt = JSON.parse(localStorage.getItem("jwt"))
-    
+  let jwt = JSON.parse(localStorage.getItem("jwt"))
+
+  async function getFiles() {    
     //make sure the jwt is in localStorage
     if (jwt !== null) {
       console.log(jwt)
@@ -34,10 +34,9 @@ export default function GetFilesPage() {
       if (jwt['access'] && jwt['refresh']) {
         //check if access token expired
         if (await tokenHasExpired(jwt['access'])) {
-          alert("Access expired")
+          alert("Access invalid")
           //check if refresh token expired as well
           if (await tokenHasExpired(jwt['refresh'])) {
-            alert("Refresh expired")
             logOut()
           } else {
             /**
@@ -54,7 +53,6 @@ export default function GetFilesPage() {
             await setFiles(response)
           }
         } else {
-          alert("Access valid")
           //get username from jwt to get their files
           setUserName(jwt['username'])
 
@@ -65,12 +63,10 @@ export default function GetFilesPage() {
         }
       } else {
         //leave this page if access and refresh are not in jwt
-        alert("jwt does not have access and refresh")
         navigate("/")
       }
     } else {
       //leave this page if jwt is not in localStorage
-      alert("jwt not in localStorage")
       navigate("/")
     }
   }
@@ -108,7 +104,7 @@ export default function GetFilesPage() {
     let postData = {
       'refresh': token
     }
-    
+
     let response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {
       method: 'POST',
       headers: {
@@ -118,23 +114,16 @@ export default function GetFilesPage() {
         body: JSON.stringify(postData)
     }).then(response => response.json())
     
-    /**
-     * checks if the server returns a response
-     * saying the refresh token is invalid
-     */
-    if (response['code'] == 'token_not_valid') {
-      alert("Refresh invalid / expired")
+    //checks if the refresh token has expired
+    if (response['code'] == 'token_invalid') {
       logOut()
     } else {
+      //create new jwt using same refresh and new access
       let newJWT = {
-        'refresh': response['refresh'],
+        'refresh': jwt['refresh'],
         'access': response['access']
       }
       //replace old jwt with new, refreshed one
-      alert("Refreshing jwt")
-      console.log("Refresh response:", response)
-      console.log("newJWT:", newJWT)
-      
       localStorage.removeItem('jwt')
       localStorage.setItem('jwt', JSON.stringify(newJWT))
     }
