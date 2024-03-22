@@ -1,7 +1,15 @@
 import { useNavigate } from "react-router-dom"
 
+import 'bootstrap/dist/css/bootstrap.css';
+import { useState } from "react";
+
+
 export default function RegisterPage() {
     let navigate = useNavigate()
+
+    //error message to show user when registering fails
+    let [statusMessage, setStatusMessage] = useState("")
+    let [displayValue, setDisplayValue] = useState("none")
 
     async function registerAccount(event: ChangeEvent<HTMLInputElement>) {
         event.preventDefault()
@@ -33,6 +41,7 @@ export default function RegisterPage() {
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} unfinished inputs`)
         } else {
+           try {
             let response = await fetch("http://127.0.0.1:8000/api/register/", {
                 method: 'POST',
                 headers: {
@@ -43,6 +52,10 @@ export default function RegisterPage() {
 
             //go to login page if registration is successful
             navigate("/login")
+           } catch {
+            await setStatusMessage("Error: This username is already taken")
+            await setDisplayValue("grid")
+           }
         }
     }
 
@@ -63,14 +76,18 @@ export default function RegisterPage() {
 
     return (
         <div>
-            <form onSubmit={registerAccount}>
-                <label>Email</label>
-                <input id="email"></input>
+            <h1 style={{"textAlign": "center"}}>Register Account</h1>
+            <form className="form-control" onSubmit={registerAccount}>
+                <label className="form-label">Email</label>
+                <input className="form-control" id="email"></input>
                 <br></br>
-                <label>Password</label>
-                <input id="password" type="password"></input>
+                <label className="form-label">Password</label>
+                <input className="form-control" id="password" type="password"></input>
                 <br></br>
-                <button>Register Account</button>
+                <button className="btn btn-primary">Register Account</button>
+                <br></br>
+                <span>Already have an account? Login <a href="/login">here</a></span>
+                <p style={{"display": displayValue, "color": "red"}}>{statusMessage}</p>
             </form>
         </div>
     )

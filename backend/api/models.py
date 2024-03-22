@@ -56,7 +56,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
 class File(models.Model):
     #base64 encoded id
-    file_id = models.CharField(max_length=64)
+    file_id = models.CharField(max_length=255)
     
     #name of file (max 255 chars)
     name = models.CharField()

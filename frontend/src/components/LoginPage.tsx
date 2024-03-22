@@ -1,7 +1,16 @@
 import { useNavigate } from "react-router-dom"
+import { useState } from "react";
+
+import 'bootstrap/dist/css/bootstrap.css';
+
 
 export default function LoginPage() {
     let navigate = useNavigate()
+
+    //error message to show user when logging in fails
+    let [statusMessage, setStatusMessage] = useState("")
+    let [displayValue, setDisplayValue] = useState("none")
+    let [displayColor, setDisplayColor] = useState("")
 
     async function login(event: ChangeEvent<HTMLInputElement>) {
 
@@ -47,24 +56,34 @@ export default function LoginPage() {
             if (response['refresh'] || response['access']) {
                 localStorage.setItem("jwt", JSON.stringify(response))
 
+                await setStatusMessage("Success: Logged in succesfully")
+                await setDisplayValue("grid")
+                await setDisplayColor("green")
+
                 //go to files page if login is successful
                 navigate("/files")
             } else {
-                alert("Invalid user credentials.")
+                await setStatusMessage("Error: The username and/or password is invalid")
+                await setDisplayValue("grid")
+                await setDisplayColor("red")
             }
         }
     }
 
     return (
         <div>
-            <form onSubmit={login}>
-                <label>Email</label>
-                <input id="email"></input>
+            <h1 style={{"textAlign": "center"}}>Login</h1>
+            <form className="form-control" onSubmit={login}>
+                <label className="form-label">Email</label>
+                <input className="form-control" id="email"></input>
                 <br></br>
-                <label>Password</label>
-                <input id="password" type="password"></input>
+                <label className="form-label">Password</label>
+                <input className="form-control" id="password" type="password"></input>
                 <br></br>
-                <button>Login</button>
+                <button className="btn btn-primary">Login</button>
+                <br></br>
+                <span>Don't have an account yet? Create one <a href="/register">here</a></span>
+                <p style={{"display": displayValue, "color": displayColor}}>{statusMessage}</p>
             </form>
         </div>
     )

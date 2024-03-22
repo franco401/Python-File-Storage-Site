@@ -6,6 +6,7 @@ A full stack, file storage web application using Python and TypeScript. Users ca
 * Frontend: TypeScript, React
 
 # Features
+* Nice looking UI thanks to Bootstrap
 * Users can upload files to the server
 * Users can view files they uploaded to the server
 * Users can download files from the server
@@ -14,4 +15,20 @@ A full stack, file storage web application using Python and TypeScript. Users ca
 * Added JWT (Json Web Tokens) for user authentication
 
 # Features to add/finish
-* Applying Bootstrap to the frontend
+* I will see what else I want to add
+
+# Django project dependencies:
+
+``` pip install django ```
+``` pip install django-cors-headers ```
+``` pip install djangorestframework ```
+``` pip install psycopg2 ``` 
+``` pip install djangorestframework-simplejwt ```
+
+# React project dependencies:
+
+``` npm install react ```
+``` npm install react-router-dom ```
+``` npm install axios ```
+``` npm install jwt-decode ```
+``` npm install bootstrap@5.3.3 ```

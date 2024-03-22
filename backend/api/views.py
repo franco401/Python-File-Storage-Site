@@ -49,7 +49,7 @@ def create_file_id(data: str) -> str:
 
 # route: api/file/<str:file_name>/
 @api_view(['GET'])
-def get_file(request: HttpRequest, file_name) -> Response:
+def get_file(request: HttpRequest, file_name: str) -> Response:
     if request.method == 'GET':
         try:
             #query database to get specific file data    
@@ -86,15 +86,32 @@ def get_files_from_user(request: HttpRequest, username: str) -> Response:
         try:
             #query database to get all file data from a specific user
             files = File.objects.filter(uploader=username)
-            
-            for file in files:
-                print("file:", file.name, file.uploader)
 
             file_serializer = FileSerializer(files, many=True)
             return Response(data=file_serializer.data)
         except:
             #if specified user doesn't exist
             return Response(status=404)
+
+# route: api/userstorage/<str:username>/
+@api_view(['GET'])
+def get_user_storage(request: HttpRequest, username: str) -> Response:
+    if request.method == 'GET':
+        try:
+            #query database to get specific user    
+            user = UserAccount.objects.get(name=username)
+
+            #json data to send to frontend
+            user_storage = {
+                'remaining_storage': user.remaining_storage,
+                'storage_limit': user.storage_limit
+            }
+
+            return Response(data=user_storage)
+        except:
+            #if the specified user isn't in the database
+            return Response(status=404, data={"error": "user_not_found"})
+
 
 
 # route: api/download-file/<str:file_name>/
@@ -139,28 +156,55 @@ def upload_file(request: HttpRequest) -> JsonResponse:
         #get filename from substring after '|'
         file_name = file.name[delimiter_index+1:]
 
+        #get file extension
+        #file_extension = file_name[file_name.index('.'):]
+
         #upload file to a server directory    
         file_to_save = default_storage.save(file_name, file)
 
         #get current time in milliseconds
         current_time = round(time.time() * 1000)
 
-        #insert file to database (with the following data below)
-        File.objects.create(
-            file_id = create_file_id(file_name + str(current_time)),
-            name = file_name,
-            size = file.size,
-            date_uploaded = current_time,
-            uploader = username,
-        )
+        user = UserAccount.objects.get(name=username)
+        if file.size > user.storage_limit:
+            print("This file is too large")
+            return JsonResponse({'error': 'file_too_large'}, safe=False)
+        elif file.size > user.remaining_storage:
+            print("You don't have enough storage")
+            return JsonResponse({'error': 'not_enough_storage'}, safe=False)
+        else:
+            print(f"File storage remaining: {user.remaining_storage}")
+            print(f"File storage limit: {user.storage_limit}")
+            #insert file to database (with the following data below)
+            File.objects.create(
+                file_id = create_file_id(file_name + str(current_time)),
+                name = file_name,
+                size = file.size,
+                date_uploaded = current_time,
+                uploader = username,
+            )
 
-        return JsonResponse(file_to_save, safe=False)
+            #use some storage for this file
+            user.remaining_storage -= file.size
+            user.save()
+            return JsonResponse(file_to_save, safe=False)
 
-# route: api/delete-file/<str:file_name>/
-def delete_file(request: HttpRequest, file_name: str) -> HttpResponse:
+# route: api/delete-file/
+def delete_file(request: HttpRequest) -> HttpResponse:
     try:
+        #read post data
+        username = request.data['username']
+        file_name = request.data['fileName']
+        
+        #create user object
+        user = UserAccount.objects.get(name=username)
+
         #query file name from database
         file = File.objects.get(name=file_name)
+
+        #free some storage for the user
+        user.remaining_storage += file.size
+        user.save()
 
         #delete file from database
         file.delete()
