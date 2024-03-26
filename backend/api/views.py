@@ -18,6 +18,9 @@ from django.http.response import JsonResponse
 #used for uploading current time to database
 import time
 
+#used for directory making
+import os
+
 #used for making a base64 string
 import base64
 
@@ -234,6 +237,13 @@ def register_user(request: HttpRequest) -> Response:
             #create user account and save it to database
             user = UserAccount.objects.create_user(email=email, name=username, password=password)
             user.save()
+
+            user_dir = settings.MEDIA_ROOT + "\\" + username
+            user_dir = user_dir.replace('\\', '/')
+
+            #create user directory in media folder
+            os.mkdir(user_dir)
+
             return Response(status=200)
         except:
             #if an insert error occurs

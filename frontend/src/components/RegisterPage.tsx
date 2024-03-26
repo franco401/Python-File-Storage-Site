@@ -1,10 +1,14 @@
 import { useNavigate } from "react-router-dom"
 
 import 'bootstrap/dist/css/bootstrap.css';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 
 export default function RegisterPage() {
+    useEffect(() => {
+        document.title = "Register Page"
+    })
+    
     let navigate = useNavigate()
 
     //error message to show user when registering fails
@@ -41,21 +45,26 @@ export default function RegisterPage() {
         if (unfinishedFields > 0) {
             alert(`You have ${unfinishedFields} unfinished inputs`)
         } else {
-           try {
-            let response = await fetch("http://127.0.0.1:8000/api/register/", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(inputFields)
-            }).then(response => response.json())
+            try {
+                let response = await fetch("http://127.0.0.1:8000/api/register/", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(inputFields)
+                })
 
-            //go to login page if registration is successful
-            navigate("/login")
-           } catch {
-            await setStatusMessage("Error: This username is already taken")
-            await setDisplayValue("grid")
-           }
+                if (response['status'] === 200) {
+                    //go to login page if registration is successful
+                    navigate("/login")
+                } else {
+                    await setStatusMessage("Error: This username is already taken")
+                    await setDisplayValue("grid")
+                }
+            } catch {
+                await setStatusMessage("Error: This username is already taken")
+                await setDisplayValue("grid")
+            }
         }
     }
 

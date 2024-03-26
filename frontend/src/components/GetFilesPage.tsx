@@ -33,6 +33,7 @@ export default function GetFilesPage() {
 
   //load all files from database
   useEffect(() => {
+    document.title = "Your Files"
     authenticateUser()
   }, [])
 

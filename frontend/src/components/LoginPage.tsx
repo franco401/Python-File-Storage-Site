@@ -1,10 +1,14 @@
 import { useNavigate } from "react-router-dom"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import 'bootstrap/dist/css/bootstrap.css';
 
 
 export default function LoginPage() {
+    useEffect(() => {
+        document.title = "Login Page"
+    }, [])
+
     let navigate = useNavigate()
 
     //error message to show user when logging in fails
